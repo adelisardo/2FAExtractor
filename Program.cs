@@ -1,35 +1,37 @@
-﻿
-using IronBarCode;
-using System.Buffers.Text;
-using System.Web;
-using System;
-using System.Text;
-using Google.Protobuf;
-using System.Net.Sockets;
+﻿using System.Web;
 using QRCoder;
-using System.Drawing;
 
 
+const string sourcePath = "D:\\";
+const string destinationPath = "D:\\";
 
-string qrCodeContent = "";
-string base64Data = HttpUtility.UrlDecode(qrCodeContent.Replace("otpauth-migration://offline?data=", ""));
-byte[] binaryData = Convert.FromBase64String(base64Data);
-
-MigrationPayload payload = MigrationPayload.Parser.ParseFrom(binaryData);
-
-string secret;
-int index = 5;
-foreach (var otp in payload.OtpParameters)
+var imagesPath = Directory.EnumerateFiles(sourcePath);
+int i = 0;
+foreach (var imagePath in imagesPath)
 {
-    secret = Base32Encoding.ToString(otp.Secret.ToByteArray());
-    using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
-    using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(GenerateOtpAuthUrl(secret, otp.Name, otp.Issuer), QRCodeGenerator.ECCLevel.Q))
-    using (PngByteQRCode qrCode = new PngByteQRCode(qrCodeData))
+    //Validate files and extract QR code content
+
+    string qrCodeContent = "";
+    string base64Data = HttpUtility.UrlDecode(qrCodeContent.Replace("otpauth-migration://offline?data=", ""));
+    byte[] binaryData = Convert.FromBase64String(base64Data);
+
+    MigrationPayload payload = MigrationPayload.Parser.ParseFrom(binaryData);
+
+    string secret;
+    int j = 0;
+    foreach (var otp in payload.OtpParameters)
     {
-        byte[] qrCodeImage = qrCode.GetGraphic(20);
-        File.WriteAllBytes($@"D:\{index}.png", qrCodeImage);
+        secret = Base32Encoding.ToString(otp.Secret.ToByteArray());
+        using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
+        using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(GenerateOtpAuthUrl(secret, otp.Name, otp.Issuer), QRCodeGenerator.ECCLevel.Q))
+        using (PngByteQRCode qrCode = new PngByteQRCode(qrCodeData))
+        {
+            byte[] qrCodeImage = qrCode.GetGraphic(20);
+            File.WriteAllBytes(Path.Combine(destinationPath, $"{i}-{j}.png"), qrCodeImage);
+        }
+        j++;
     }
-    index++;
+    i++;
 }
 
 static string GenerateOtpAuthUrl(string secret, string accountName, string issuer)
